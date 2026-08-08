@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useMotionValue, useTransform, animate } from "motion/react";
 
-export default function CountUp({ value, className }) {
-  const mv = useMotionValue(0);
+export default function CountUp({ value, from = 0, className }) {
+  const mv = useMotionValue(from);
   const rounded = useTransform(mv, (v) => Math.round(v));
   const ref = useRef(null);
 
@@ -19,7 +19,7 @@ export default function CountUp({ value, className }) {
 
   return (
     <span className={className} ref={ref}>
-      0
+      {from}
     </span>
   );
 }

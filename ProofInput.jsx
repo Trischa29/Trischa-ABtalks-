@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Loader2, TriangleAlert } from "lucide-react";
+import { Check, Loader2, TriangleAlert, ArrowRight } from "lucide-react";
 import { cn } from "../lib/cn";
 
 export default function ProofInput({
@@ -12,6 +12,10 @@ export default function ProofInput({
   onChange,
   status = "idle",
   errorText,
+  successText,
+  checkLabel,
+  validatingLabel = "Validating...",
+  onCheck,
   checks = [],
 }) {
   const isValid = status === "valid";
@@ -55,7 +59,7 @@ export default function ProofInput({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          disabled={isValid}
+          disabled={isValid || isValidating}
           aria-label={label}
           aria-invalid={isInvalid}
           className={cn(
@@ -69,13 +73,32 @@ export default function ProofInput({
                 : "border-[var(--color-line-strong)] focus:border-[var(--color-accent)]"
           )}
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-          {isValidating && (
-            <Loader2 className="size-4 animate-spin text-[var(--color-ink-mute)]" strokeWidth={2} />
-          )}
-          {isInvalid && <TriangleAlert className="size-4 text-[var(--color-warning)]" strokeWidth={2} />}
-        </div>
       </div>
+
+      {!isValid && (
+        <button
+          type="button"
+          onClick={onCheck}
+          disabled={!value.trim() || isValidating}
+          className={cn(
+            "mt-3 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em]",
+            "text-[var(--color-accent)] disabled:text-[var(--color-ink-faint)] disabled:pointer-events-none",
+            "transition-colors duration-200"
+          )}
+        >
+          {isValidating ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin" strokeWidth={2} />
+              {validatingLabel}
+            </>
+          ) : (
+            <>
+              {checkLabel}
+              <ArrowRight className="size-3.5" strokeWidth={2} />
+            </>
+          )}
+        </button>
+      )}
 
       <AnimatePresence>
         {isInvalid && errorText && (
@@ -83,8 +106,9 @@ export default function ProofInput({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-2 font-mono text-[11px] text-[var(--color-warning)]"
+            className="mt-2.5 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--color-warning)]"
           >
+            <TriangleAlert className="size-3.5 shrink-0" strokeWidth={2} />
             {errorText}
           </motion.p>
         )}
@@ -115,6 +139,19 @@ export default function ProofInput({
               </motion.li>
             ))}
           </motion.ul>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isValid && successText && (
+          <motion.p
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-[var(--color-success)]"
+          >
+            <Check className="size-3.5 shrink-0" strokeWidth={2.5} />
+            {successText}
+          </motion.p>
         )}
       </AnimatePresence>
     </div>

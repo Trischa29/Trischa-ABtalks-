@@ -1,62 +1,62 @@
-import { useRef, useState } from "react";
-import { useScroll, useMotionValueEvent } from "motion/react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import Button from "../components/Button";
-import SectionReveal from "../components/SectionReveal";
 import ModelCredit from "../components/ModelCredit";
 import CityScene from "../components/journey/CityScene";
-import ScrollBeat from "../components/journey/ScrollBeat";
-import { GithubMark, LinkedinMark } from "../components/icons";
+import GsapScene from "../components/journey/GsapScene";
+import { useScrollTrack } from "../hooks/useScrollTrack";
+import { useLenis } from "../hooks/useLenis";
+import { localProgress } from "../lib/scrollMath";
 import { TOTAL_DAYS } from "../data/challenge";
 
-const loop = [
-  { n: "01", label: "Build", note: "Ship one focused piece of work." },
-  { n: "02", label: "Commit", note: "Push it. It exists now." },
-  { n: "03", label: "Post", note: "Put it where people can see it." },
-  { n: "04", label: "Repeat", note: "Tomorrow, the loop closes again." },
+const TRACK_HEIGHT_VH = 850;
+
+const SCENES = {
+  hero: [0, 0.08],
+  howItWorks: [0.1, 0.24],
+  journey: [0.26, 0.42],
+  dashboardIntro: [0.58, 0.82],
+  cta: [0.88, 1],
+};
+
+const howItWorks = [
+  { n: "01", label: "Pick a track", note: "Choose the coding track you actually want to get good at." },
+  { n: "02", label: "Build", note: "Build something every day. Small enough to finish." },
+  { n: "03", label: "Commit", note: "Submit your GitHub commit." },
+  { n: "04", label: "Post", note: "Share your progress through LinkedIn." },
+  { n: "05", label: "Compound", note: "Keep building and maintain your public learning streak." },
 ];
 
-const stages = [
-  { n: "01", label: "Choose", note: "Pick the track you actually want to get good at." },
-  { n: "02", label: "Build", note: "One focused task, every day. Small enough to finish." },
-  { n: "03", label: "Prove", note: "Submit your GitHub work and your LinkedIn post." },
-  { n: "04", label: "Compound", note: "60 days of public proof, not 60 private tutorials." },
-];
+const journeyDays = [1, 7, 12, 14, 30, 45, 60];
 
-const proofFlow = [
-  { label: "Code", note: "Written today, not someday." },
-  { label: "GitHub", note: "A real commit, timestamped." },
-  { label: "Proof", note: "Verified against the brief." },
-  { label: "LinkedIn", note: "Posted where it counts." },
-  { label: "Visibility", note: "Seen by the people hiring." },
-];
+function useLocalSceneProgress(subscribe, start, end) {
+  const [t, setT] = useState(0);
+  useEffect(() => subscribe((global) => setT(localProgress(global, start, end))), [subscribe, start, end]);
+  return t;
+}
 
 export default function Landing() {
+  useLenis();
   const trackRef = useRef(null);
-  const navigate = useNavigate();
-  const { scrollYProgress } = useScroll({ target: trackRef, offset: ["start start", "end end"] });
-  const [displayDay, setDisplayDay] = useState(1);
-  const [t, setT] = useState(0);
-  const [warping, setWarping] = useState(false);
+  const { progressRef, subscribe } = useScrollTrack(trackRef);
 
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    const d = Math.min(TOTAL_DAYS, Math.max(1, Math.round(1 + v * (TOTAL_DAYS - 1))));
-    setDisplayDay((prev) => (prev === d ? prev : d));
-    setT(v);
-  });
+  const [headerDay, setHeaderDay] = useState(1);
+  useEffect(
+    () =>
+      subscribe((global) => {
+        const d = Math.min(TOTAL_DAYS, Math.max(1, Math.round(1 + global * (TOTAL_DAYS - 1))));
+        setHeaderDay((prev) => (prev === d ? prev : d));
+      }),
+    [subscribe]
+  );
 
-  const enterJourney = (e) => {
-    e.preventDefault();
-    setWarping(true);
-    setTimeout(() => navigate("/dashboard"), 420);
-  };
+  const journeyT = useLocalSceneProgress(subscribe, SCENES.journey[0], SCENES.journey[1]);
+  const activeJourneyIndex = Math.min(journeyDays.length - 1, Math.floor(journeyT * journeyDays.length));
 
   return (
-    <main className="bg-[var(--color-bg)] text-[var(--color-ink)]">
-      {/* Pinned cinematic journey — scroll drives the 3D camera + narrative beats */}
-      <div ref={trackRef} className="relative" style={{ height: "660vh" }}>
+    <main className="relative bg-[var(--color-bg)] text-[var(--color-ink)]">
+      <div ref={trackRef} className="relative" style={{ height: `${TRACK_HEIGHT_VH}vh` }}>
         <div className="sticky top-0 h-screen w-full overflow-hidden">
-          <CityScene scrollProgress={scrollYProgress} className="absolute inset-0" />
+          <CityScene progressRef={progressRef} className="absolute inset-0" />
 
           <div
             className="pointer-events-none absolute inset-0"
@@ -75,219 +75,158 @@ export default function Landing() {
                 digital build system
               </p>
               <p className="font-mono text-[11px] text-[var(--color-accent)]">
-                {String(displayDay).padStart(2, "0")} / {TOTAL_DAYS}
+                {String(headerDay).padStart(2, "0")} / {TOTAL_DAYS}
               </p>
             </div>
           </header>
 
-          {/* Beat 1 — hero: asymmetric, overlapping the intelligence core */}
-          <ScrollBeat t={t} start={0} end={0.08} className="justify-end pb-28 items-start text-left">
+          {/* SCENE 1 — hero */}
+          <GsapScene
+            subscribe={subscribe}
+            start={SCENES.hero[0]}
+            end={SCENES.hero[1]}
+            className="justify-end pb-28 items-start text-left px-6"
+          >
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-accent)]">
-              A 60-day build challenge
+              ABTalks
             </p>
-            <h1 className="mt-3 font-display font-bold uppercase leading-[0.9] tracking-tight text-[clamp(2.5rem,13vw,4rem)]">
-              60
+            <h1 className="mt-3 font-display font-bold uppercase leading-[0.9] tracking-tight text-[clamp(2.2rem,11vw,3.6rem)]">
+              The 60-day
               <br />
-              days.
+              coding challenge.
             </h1>
-            <h2 className="mt-1 font-display font-semibold uppercase leading-[0.95] tracking-tight text-[clamp(1.5rem,7.5vw,2.4rem)] text-[var(--color-ink-dim)]">
-              Build something
+            <h2 className="mt-2 font-display font-semibold uppercase leading-[1.05] tracking-tight text-[clamp(1.2rem,5.5vw,1.7rem)] text-[var(--color-ink-dim)]">
+              Build every day.
               <br />
-              real.
+              Show your work.
             </h2>
-            <p className="mt-4 max-w-[30ch] font-sans text-[14px] leading-relaxed text-[var(--color-ink-dim)]">
-              Choose a track. Build something every day. Commit your work. Share it publicly.
+            <p className="mt-4 max-w-[34ch] font-sans text-[14px] leading-relaxed text-[var(--color-ink-dim)]">
+              ABTalks runs a 60-day coding challenge for Indian college students. Students pick a track,
+              build something every day, and maintain a public learning streak by submitting a GitHub
+              commit and a LinkedIn post.
             </p>
-            <div className="mt-6 flex items-center gap-3 pointer-events-auto">
-              <Button onClick={enterJourney} to="#">
-                Enter the city
-              </Button>
-            </div>
             <p className="mt-5 w-fit font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-ink-faint)]">
               01 → 60 · build / commit / post
             </p>
-          </ScrollBeat>
+          </GsapScene>
 
-          {/* Beat 2 — the transformation itself */}
-          <ScrollBeat t={t} start={0.115} end={0.15} className="items-center text-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--color-accent)]">
-              60 days, compressed into one skyline
-            </p>
-          </ScrollBeat>
-
-          {/* Beat 3 — reframe */}
-          <ScrollBeat t={t} start={0.19} end={0.27} className="items-start text-left pl-6">
+          {/* SCENE 2 — how it works */}
+          <GsapScene
+            subscribe={subscribe}
+            start={SCENES.howItWorks[0]}
+            end={SCENES.howItWorks[1]}
+            className="items-start text-left px-6 justify-center"
+          >
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-mute)]">
-              Coding is easy to start
+              How it works
             </p>
-            <h2 className="mt-3 font-display font-bold uppercase leading-[0.95] text-[clamp(2rem,9.5vw,2.9rem)] text-balance">
-              Consistency
-              <br />
-              is hard.
-            </h2>
-            <p className="mt-4 max-w-[32ch] font-sans text-[14px] leading-relaxed text-[var(--color-ink-dim)]">
-              ABTalks turns consistency into a visible system — not another course you never finish.
-            </p>
-          </ScrollBeat>
-
-          {/* Beat 4 — the daily loop */}
-          <ScrollBeat t={t} start={0.3} end={0.39} className="items-end text-right pr-5">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-mute)]">
-              How a day works
-            </p>
-            <div className="mt-4 space-y-3">
-              {loop.map((s) => (
-                <div key={s.n}>
-                  <p className="font-display font-semibold text-[20px] leading-tight w-fit ml-auto">
-                    <span className="font-mono text-[12px] text-[var(--color-accent)] mr-2">{s.n}</span>
-                    {s.label}
-                  </p>
-                  <p className="font-mono text-[11px] text-[var(--color-ink-dim)]">{s.note}</p>
-                </div>
-              ))}
-            </div>
-          </ScrollBeat>
-
-          {/* Beat 5 — Day 07 */}
-          <ScrollBeat t={t} start={0.42} end={0.49} className="items-start text-left">
-            <p className="font-mono text-[52px] leading-none text-[var(--color-ink-faint)]">07</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-accent)] mt-1">
-              Rhythm
-            </p>
-            <h3 className="mt-3 font-display font-semibold text-[26px] leading-[1.1] text-balance">
-              One week in.
-            </h3>
-            <p className="mt-2 max-w-[28ch] font-mono text-[12px] text-[var(--color-ink-dim)]">
-              The habit starts to form. It stops feeling like a decision.
-            </p>
-          </ScrollBeat>
-
-          {/* Beat 6 — Day 14 */}
-          <ScrollBeat t={t} start={0.52} end={0.6} className="items-end text-right pr-5">
-            <p className="font-mono text-[52px] leading-none text-[var(--color-ink-faint)]">14</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-accent)] mt-1">
-              Momentum
-            </p>
-            <h3 className="mt-3 font-display font-semibold text-[26px] leading-[1.1] text-balance">
-              Proof starts
-              <br />
-              compounding.
-            </h3>
-            <p className="mt-2 max-w-[28ch] font-mono text-[12px] text-[var(--color-ink-dim)]">
-              14 days of public proof is worth more than a shelf of tutorials — it's evidence you can
-              consistently build.
-            </p>
-          </ScrollBeat>
-
-          {/* Beat 7 — Day 30 */}
-          <ScrollBeat t={t} start={0.63} end={0.71} className="items-start text-left">
-            <p className="font-mono text-[52px] leading-none text-[var(--color-ink-faint)]">30</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-accent)] mt-1">
-              Body of work
-            </p>
-            <h3 className="mt-3 font-display font-semibold text-[26px] leading-[1.1] text-balance">
-              Halfway.
-            </h3>
-            <p className="mt-2 max-w-[28ch] font-mono text-[12px] text-[var(--color-ink-dim)]">
-              Look back at day one. You wouldn't recognize that version of you.
-            </p>
-          </ScrollBeat>
-
-          {/* Beat 7b — Day 45 */}
-          <ScrollBeat t={t} start={0.755} end={0.815} className="items-end text-right pr-5">
-            <p className="font-mono text-[52px] leading-none text-[var(--color-ink-faint)]">45</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-accent)] mt-1">
-              Compounding
-            </p>
-            <h3 className="mt-3 font-display font-semibold text-[26px] leading-[1.1] text-balance">
-              It's not motivation
-              <br />
-              anymore.
-            </h3>
-            <p className="mt-2 max-w-[28ch] font-mono text-[12px] text-[var(--color-ink-dim)]">
-              45 days in, showing up stops being a choice you make and starts being infrastructure.
-            </p>
-          </ScrollBeat>
-
-          {/* Beat 8 — the product, plainly */}
-          <ScrollBeat t={t} start={0.74} end={0.84} className="items-start text-left">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-mute)]">
-              What ABTalks actually is
-            </p>
-            <div className="mt-4 space-y-2.5">
-              {stages.map((s) => (
+            <div className="mt-5 space-y-3.5 max-w-[340px]">
+              {howItWorks.map((s) => (
                 <div key={s.n} className="flex items-baseline gap-3">
                   <span className="font-mono text-[11px] text-[var(--color-accent)] w-4 shrink-0">{s.n}</span>
                   <div>
-                    <span className="font-display font-semibold text-[17px]">{s.label} </span>
-                    <span className="font-mono text-[11px] text-[var(--color-ink-dim)]">{s.note}</span>
+                    <p className="font-display font-semibold text-[18px] leading-tight">{s.label}</p>
+                    <p className="font-mono text-[11px] text-[var(--color-ink-dim)]">{s.note}</p>
                   </div>
                 </div>
               ))}
             </div>
-          </ScrollBeat>
+          </GsapScene>
 
-          {/* Beat 9 — Day 60 climax */}
-          <ScrollBeat t={t} start={0.9} end={1} className="items-center text-center">
-            <p className="font-mono text-[52px] leading-none text-[var(--color-accent)]">60</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-ink-mute)] mt-1">
-              Finisher
+          {/* SCENE 3 — 60-day journey (scroll-driven day checkpoints) */}
+          <GsapScene
+            subscribe={subscribe}
+            start={SCENES.journey[0]}
+            end={SCENES.journey[1]}
+            className="items-center text-center justify-center px-6"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-accent)]">
+              60 days, compressed into one skyline
             </p>
-            <h2 className="mt-3 font-display font-bold uppercase leading-[1] text-[clamp(1.8rem,8.5vw,2.5rem)] text-balance">
-              60 days later,
+            <div className="relative mt-8 w-full max-w-[420px]">
+              <div className="absolute left-0 right-0 top-[8px] h-px bg-[var(--color-line-strong)]" />
+              <div
+                className="absolute left-0 top-[8px] h-px bg-[var(--color-accent)]"
+                style={{ width: `${(activeJourneyIndex / (journeyDays.length - 1)) * 100}%` }}
+              />
+              <div className="relative flex justify-between">
+                {journeyDays.map((d, i) => {
+                  const active = i === activeJourneyIndex;
+                  const past = i < activeJourneyIndex;
+                  return (
+                    <div key={d} className="flex flex-col items-center gap-2.5">
+                      <span
+                        className={`block size-3 rounded-full border ${
+                          active
+                            ? "bg-[var(--color-accent)] border-[var(--color-accent)] shadow-[0_0_0_5px_rgba(91,127,255,0.16)]"
+                            : past
+                              ? "bg-[var(--color-ink)] border-[var(--color-ink)]"
+                              : "bg-transparent border-[var(--color-line-strong)]"
+                        }`}
+                      />
+                      <span
+                        className={`font-mono text-[10px] ${
+                          active ? "text-[var(--color-accent)]" : past ? "text-[var(--color-ink-dim)]" : "text-[var(--color-ink-faint)]"
+                        }`}
+                      >
+                        {String(d).padStart(2, "0")}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </GsapScene>
+
+          {/* SCENE 4 — dashboard introduction, laptop now in frame */}
+          <GsapScene
+            subscribe={subscribe}
+            start={SCENES.dashboardIntro[0]}
+            end={SCENES.dashboardIntro[1]}
+            className="items-end text-right px-6 justify-center"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-accent)]">
+              Every build. Every streak.
+            </p>
+            <h2 className="mt-3 font-display font-bold leading-[1.05] text-[clamp(1.6rem,5.5vw,2.2rem)] text-balance max-w-[16ch] ml-auto">
+              One workspace to run the whole challenge.
+            </h2>
+            <p className="mt-3 max-w-[32ch] font-sans text-[14px] leading-relaxed text-[var(--color-ink-dim)] ml-auto">
+              Your streak, today's build, and 60 days of proof — all tracked in one place.
+            </p>
+          </GsapScene>
+
+          {/* SCENE 5 — closing CTA (the one route-changing button on this page) */}
+          <GsapScene
+            subscribe={subscribe}
+            start={SCENES.cta[0]}
+            end={SCENES.cta[1]}
+            className="items-center text-center justify-center px-6"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-ink-mute)]">
+              Ready to build?
+            </p>
+            <h2 className="mt-3 font-display font-bold uppercase leading-[1] text-[clamp(1.8rem,8vw,2.5rem)] text-balance">
+              60 days from now,
               <br />
               you're not the
               <br />
               same builder.
             </h2>
             <div className="mt-6 pointer-events-auto">
-              <Button onClick={enterJourney} to="#">
-                Enter the city
-              </Button>
+              <Button to="/dashboard">Start the challenge</Button>
             </div>
-          </ScrollBeat>
-
-          {warping && (
-            <div className="absolute inset-0 z-30 bg-[var(--color-bg)] animate-[fadeIn_0.4s_ease-in_forwards] opacity-0" />
-          )}
+          </GsapScene>
         </div>
       </div>
 
       <div className="mx-auto max-w-[560px] px-5">
-        {/* How you prove it */}
-        <section className="py-16 border-t border-[var(--color-line)]">
-          <SectionReveal>
-            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--color-ink-mute)]">
-              Build in public
-            </span>
-            <h2 className="mt-3 font-display font-semibold text-[26px] leading-[1.15] text-balance">
-              The work has to leave the platform.
-            </h2>
-          </SectionReveal>
-
-          <div className="mt-8 relative pl-6 border-l border-[var(--color-line)]">
-            {proofFlow.map((f, i) => (
-              <SectionReveal key={f.label} className={`relative ${i !== proofFlow.length - 1 ? "pb-7" : ""}`}>
-                <span className="absolute -left-[29px] top-1 size-2 rounded-full bg-[var(--color-accent)]" />
-                <div className="flex items-center gap-2">
-                  {f.label === "GitHub" && <GithubMark className="size-3.5 text-[var(--color-ink-dim)]" />}
-                  {f.label === "LinkedIn" && (
-                    <LinkedinMark className="size-3.5 text-[var(--color-ink-dim)]" />
-                  )}
-                  <p className="font-display font-semibold text-[16px]">{f.label}</p>
-                </div>
-                <p className="mt-1 font-mono text-[12px] text-[var(--color-ink-dim)]">{f.note}</p>
-              </SectionReveal>
-            ))}
-          </div>
-        </section>
-
         <footer className="py-10 border-t border-[var(--color-line)]">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[11px] text-[var(--color-ink-faint)]">ABTalks © 2026</span>
             <span className="font-mono text-[11px] text-[var(--color-ink-faint)]">Build. Prove. Grow.</span>
           </div>
-          <ModelCredit ids={["city"]} className="mt-3" />
+          <ModelCredit ids={["city", "laptop"]} className="mt-3" />
         </footer>
       </div>
     </main>

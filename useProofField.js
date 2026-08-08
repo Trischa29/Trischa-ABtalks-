@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-// Mocked async verification: debounce typing, "check" the URL shape,
-// then reveal a couple of checklist lines before settling on valid/invalid.
+// Mocked async verification, triggered explicitly by a "Check ->" button
+// (not on every keystroke) — types, then presses check, then watches it
+// validate. Editing the value after a check invalidates the prior result.
 export function useProofField({ pattern, invalidMessage, checkLabels }) {
   const [value, setValue] = useState("");
   const [status, setStatus] = useState("idle"); // idle | validating | valid | invalid
@@ -16,44 +17,42 @@ export function useProofField({ pattern, invalidMessage, checkLabels }) {
   useEffect(() => {
     clearTimers();
     setChecks([]);
+    setStatus("idle");
+    return clearTimers;
+  }, [value]);
 
-    if (!value.trim()) {
-      setStatus("idle");
+  const check = useCallback(() => {
+    if (!value.trim()) return;
+    clearTimers();
+    setChecks([]);
+    setStatus("validating");
+
+    if (!pattern.test(value.trim())) {
+      timers.current.push(setTimeout(() => setStatus("invalid"), 550));
       return;
     }
 
-    setStatus("validating");
-
-    const debounce = setTimeout(() => {
-      if (!pattern.test(value.trim())) {
-        setStatus("invalid");
-        return;
-      }
-
-      checkLabels.forEach((label, i) => {
-        timers.current.push(
-          setTimeout(() => {
-            setChecks((prev) => [...prev.filter((c) => c.label !== label), { label, state: "checking" }]);
-          }, 300 + i * 500)
-        );
-        timers.current.push(
-          setTimeout(() => {
-            setChecks((prev) => prev.map((c) => (c.label === label ? { ...c, state: "done" } : c)));
-            if (i === checkLabels.length - 1) setStatus("valid");
-          }, 650 + i * 500)
-        );
-      });
-    }, 500);
-
-    timers.current.push(debounce);
-    return clearTimers;
-  }, [value]);
+    checkLabels.forEach((label, i) => {
+      timers.current.push(
+        setTimeout(() => {
+          setChecks((prev) => [...prev.filter((c) => c.label !== label), { label, state: "checking" }]);
+        }, 350 + i * 500)
+      );
+      timers.current.push(
+        setTimeout(() => {
+          setChecks((prev) => prev.map((c) => (c.label === label ? { ...c, state: "done" } : c)));
+          if (i === checkLabels.length - 1) setStatus("valid");
+        }, 700 + i * 500)
+      );
+    });
+  }, [value, pattern, checkLabels]);
 
   return {
     value,
     setValue,
     status,
     checks,
+    check,
     errorText: status === "invalid" ? invalidMessage : undefined,
     isValid: status === "valid",
   };
