@@ -54,7 +54,7 @@ export default function JourneyStrip({ days, currentDay, totalDays = 60, classNa
                     ? "text-[var(--color-accent)]"
                     : status === "complete"
                       ? "text-[var(--color-ink-dim)]"
-                      : "text-[var(--color-ink-faint)]"
+                      : "text-[var(--color-ink-mute)]"
                 )}
               >
                 {String(d).padStart(2, "0")}

@@ -71,6 +71,15 @@ export const achievements = [
   { id: "finisher", label: "60 Day Finisher", atLeast: 60, requirement: "Complete all 60 days." },
 ];
 
+// Recent build history — mocked titles for the days immediately before
+// today, each already verified (both proof channels), reinforcing the
+// "build something every day" loop on the dashboard.
+export const buildHistory = [
+  { day: 12, title: "Portfolio Landing Page", github: true, linkedin: true },
+  { day: 11, title: "Responsive Landing Page", github: true, linkedin: true },
+  { day: 10, title: "JavaScript Interaction", github: true, linkedin: true },
+];
+
 // Alternate dashboard states for demoing the momentum-recovery + first-day UX.
 export const states = {
   active: { kind: "active" },

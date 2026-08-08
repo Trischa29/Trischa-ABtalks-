@@ -5,7 +5,8 @@ import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { buildDroneCamera, droneShiftX } from "../../three/droneCamera";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-import { hasWebGL } from "../../lib/webgl";
+import { useDeferredMount } from "../../hooks/useDeferredMount";
+import { hasWebGL, resyncSizeOnContextRestore, loseContextOnUnmount } from "../../lib/webgl";
 import { cn } from "../../lib/cn";
 
 const ENTRY_OFFSET = 1.3;
@@ -134,10 +135,18 @@ function SceneContents({ reducedMotion, progressRef, energy, pulseKey }) {
 export default function DroneScene({ progressRef, className, fallbackClassName, energy = 0, pulseKey = 0 }) {
   const reducedMotion = useReducedMotion();
   const [webglOk] = useState(hasWebGL);
+  const ready = useDeferredMount();
+  const disposeRef = useRef(null);
+
+  useEffect(() => {
+    return () => disposeRef.current?.();
+  }, []);
 
   if (!webglOk) {
     return <div className={cn(fallbackClassName)} />;
   }
+
+  if (!ready) return <div className={cn(className)} />;
 
   return (
     <div className={cn(className)}>
@@ -145,6 +154,10 @@ export default function DroneScene({ progressRef, className, fallbackClassName, 
         dpr={[1, 1.4]}
         gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
         camera={{ fov: 40, near: 0.1, far: 20, position: [0.42, 0.05, 2.25] }}
+        onCreated={(state) => {
+          resyncSizeOnContextRestore(state);
+          disposeRef.current = loseContextOnUnmount(state);
+        }}
       >
         <Suspense fallback={null}>
           <SceneContents reducedMotion={reducedMotion} progressRef={progressRef} energy={energy} pulseKey={pulseKey} />

@@ -1,4 +1,4 @@
-import { Suspense, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, RenderTexture, PerspectiveCamera } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
@@ -6,7 +6,8 @@ import * as THREE from "three";
 import CityModel from "./CityModel";
 import { buildCityCamera, cityCameraFov, cityFogFar, LAPTOP_WORLD_OFFSET } from "../../three/cityCamera";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-import { hasWebGL } from "../../lib/webgl";
+import { useDeferredMount } from "../../hooks/useDeferredMount";
+import { hasWebGL, resyncSizeOnContextRestore, loseContextOnUnmount } from "../../lib/webgl";
 import { cn } from "../../lib/cn";
 
 const tmpPos = new THREE.Vector3();
@@ -162,6 +163,26 @@ function SceneContents({ progressRef, reducedMotion }) {
 export default function CityScene({ progressRef, className, fallbackClassName }) {
   const reducedMotion = useReducedMotion();
   const [webglOk] = useState(hasWebGL);
+  const ready = useDeferredMount();
+  const disposeRef = useRef(null);
+
+  // city.glb and laptop.glb are also loaded by Dashboard's LaptopScene
+  // in a completely separate <Canvas> (its own WebGLRenderer/GL
+  // context). drei's useGLTF cache is keyed by URL alone, shared
+  // globally across every Canvas — but a mesh's geometry/material
+  // buffers only exist on the context that uploaded them. Without
+  // this, navigating away from here leaves the cache holding an
+  // Object3D bound to a now-disposed context, so the next page to
+  // request the same URL gets geometry that silently renders nothing
+  // on its own (different) context. Clearing on unmount forces a
+  // fresh parse — cheap, since the .glb itself is still HTTP-cached.
+  useEffect(() => {
+    return () => {
+      useGLTF.clear("/models/city.glb");
+      useGLTF.clear("/models/laptop.glb");
+      disposeRef.current?.();
+    };
+  }, []);
 
   if (!webglOk) {
     return (
@@ -173,12 +194,18 @@ export default function CityScene({ progressRef, className, fallbackClassName })
     );
   }
 
+  if (!ready) return <div className={cn(className)} />;
+
   return (
     <div className={cn(className)}>
       <Canvas
         dpr={[1, 1.6]}
         gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
         camera={{ fov: 50, near: 0.1, far: 140 }}
+        onCreated={(state) => {
+          resyncSizeOnContextRestore(state);
+          disposeRef.current = loseContextOnUnmount(state);
+        }}
       >
         <Suspense fallback={null}>
           <SceneContents progressRef={progressRef} reducedMotion={reducedMotion} />

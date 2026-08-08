@@ -16,12 +16,12 @@ export default function Achievement({ label, earned, requirement }) {
         {earned ? (
           <Check className="size-3.5 shrink-0 text-[var(--color-accent)]" strokeWidth={2.5} />
         ) : (
-          <Lock className="size-3.5 shrink-0 text-[var(--color-ink-faint)]" strokeWidth={2} />
+          <Lock className="size-3.5 shrink-0 text-[var(--color-ink-mute)]" strokeWidth={2} />
         )}
         <span
           className={cn(
             "flex-1 font-mono text-[12px] uppercase tracking-[0.06em]",
-            earned ? "text-[var(--color-ink)]" : "text-[var(--color-ink-faint)]"
+            earned ? "text-[var(--color-ink)] font-medium" : "text-[var(--color-ink-mute)]"
           )}
         >
           {label}

@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import Button from "../components/Button";
 import ModelCredit from "../components/ModelCredit";
+import SiteNav from "../components/SiteNav";
 import CityScene from "../components/journey/CityScene";
 import GsapScene from "../components/journey/GsapScene";
 import { useScrollTrack } from "../hooks/useScrollTrack";
 import { useLenis } from "../hooks/useLenis";
+import { useStudentState } from "../hooks/useStudentState";
 import { localProgress } from "../lib/scrollMath";
 import { TOTAL_DAYS } from "../data/challenge";
+import { Link } from "react-router-dom";
 
 const TRACK_HEIGHT_VH = 850;
 
@@ -38,6 +41,8 @@ export default function Landing() {
   useLenis();
   const trackRef = useRef(null);
   const { progressRef, subscribe } = useScrollTrack(trackRef);
+  const progress = useStudentState();
+  const todayComplete = progress.isDayComplete(progress.currentDay);
 
   const [headerDay, setHeaderDay] = useState(1);
   useEffect(
@@ -67,9 +72,12 @@ export default function Landing() {
           />
 
           <header className="pointer-events-none absolute top-0 inset-x-0 flex items-start justify-between px-5 pt-5 z-10">
-            <span className="font-display text-[15px] font-semibold tracking-tight">
-              AB<span className="text-[var(--color-accent)]">.</span>
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="font-display text-[15px] font-semibold tracking-tight">
+                AB<span className="text-[var(--color-accent)]">.</span>
+              </span>
+              <SiteNav className="pointer-events-auto" />
+            </div>
             <div className="text-right">
               <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-mute)]">
                 digital build system
@@ -87,10 +95,10 @@ export default function Landing() {
             end={SCENES.hero[1]}
             className="justify-end pb-28 items-start text-left px-6"
           >
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--color-accent)]">
+            <p className="font-display font-bold uppercase leading-none tracking-tight text-[clamp(1.6rem,7vw,2.4rem)] text-[var(--color-accent)]">
               ABTalks
             </p>
-            <h1 className="mt-3 font-display font-bold uppercase leading-[0.9] tracking-tight text-[clamp(2.2rem,11vw,3.6rem)]">
+            <h1 className="mt-2 font-display font-bold uppercase leading-[0.9] tracking-tight text-[clamp(2.2rem,11vw,3.6rem)]">
               The 60-day
               <br />
               coding challenge.
@@ -220,13 +228,69 @@ export default function Landing() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[560px] px-5">
-        <footer className="py-10 border-t border-[var(--color-line)]">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] text-[var(--color-ink-faint)]">ABTalks © 2026</span>
-            <span className="font-mono text-[11px] text-[var(--color-ink-faint)]">Build. Prove. Grow.</span>
+      <div className="mx-auto max-w-[680px] px-5">
+        <footer className="py-12 border-t border-[var(--color-line)]">
+          <div className="flex flex-col gap-9 sm:flex-row sm:justify-between">
+            <div>
+              <span className="font-display text-[15px] font-semibold tracking-tight">
+                AB<span className="text-[var(--color-accent)]">.</span>
+              </span>
+              <p className="mt-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-mute)]">
+                60-day coding challenge
+              </p>
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-ink-faint)]">
+                Build every day. Build in public.
+              </p>
+            </div>
+
+            <div className="flex gap-9 sm:gap-11">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-mute)]">
+                  Site
+                </p>
+                <SiteNav orientation="column" className="mt-2.5" />
+              </div>
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-mute)]">
+                  Contact
+                </p>
+                <a
+                  href="mailto:hello@abtalks.in"
+                  className="mt-2.5 block font-mono text-[11px] text-[var(--color-ink-dim)] hover:text-[var(--color-ink)] transition-colors"
+                >
+                  hello@abtalks.in
+                </a>
+              </div>
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-ink-mute)]">
+                  Social
+                </p>
+                <p className="mt-2.5 font-mono text-[11px] text-[var(--color-ink-dim)]">Instagram</p>
+                <p className="mt-1.5 font-mono text-[11px] text-[var(--color-ink-dim)]">LinkedIn</p>
+              </div>
+            </div>
           </div>
-          <ModelCredit ids={["city", "laptop"]} className="mt-3" />
+
+          <div className="mt-9 pt-6 border-t border-[var(--color-line)] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-ink-mute)]">
+                Today's proof
+              </span>
+              {todayComplete ? (
+                <span className="font-mono text-[11px] text-[var(--color-success)]">GitHub ✓ · LinkedIn ✓</span>
+              ) : (
+                <Link
+                  to={`/day/${progress.currentDay}`}
+                  className="font-mono text-[11px] text-[var(--color-accent)] hover:text-[var(--color-ink)] transition-colors"
+                >
+                  Submit today →
+                </Link>
+              )}
+            </div>
+            <span className="font-mono text-[10px] text-[var(--color-ink-faint)]">© ABTalks</span>
+          </div>
+
+          <ModelCredit ids={["city", "laptop"]} className="mt-6" />
         </footer>
       </div>
     </main>

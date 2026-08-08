@@ -39,10 +39,10 @@ export default function ProgressRing({ value, max, size = 104, strokeWidth = 5, 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="flex items-baseline gap-1 font-display font-semibold text-[22px] leading-none text-[var(--color-ink)]">
           <span>{Math.round(value)}</span>
-          <span className="font-mono text-[11px] text-[var(--color-ink-mute)]">/{max}</span>
+          <span className="font-mono font-medium text-[11px] text-[var(--color-ink-dim)]">/{max}</span>
         </div>
         {sublabel && (
-          <span className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-[var(--color-ink-mute)]">
+          <span className="mt-1.5 font-mono font-medium text-[9px] uppercase tracking-[0.1em] text-[var(--color-ink-dim)]">
             {sublabel}
           </span>
         )}

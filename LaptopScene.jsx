@@ -1,11 +1,12 @@
-import { Suspense, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, RenderTexture, PerspectiveCamera } from "@react-three/drei";
 import * as THREE from "three";
 import CityModel from "./CityModel";
 import { buildLaptopCamera, laptopShiftX } from "../../three/laptopCamera";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-import { hasWebGL } from "../../lib/webgl";
+import { useDeferredMount } from "../../hooks/useDeferredMount";
+import { hasWebGL, resyncSizeOnContextRestore, loseContextOnUnmount } from "../../lib/webgl";
 import { cn } from "../../lib/cn";
 
 const ENTRANCE_DURATION = 1.15;
@@ -152,10 +153,26 @@ function SceneContents({ reducedMotion, progressRef }) {
 export default function LaptopScene({ progressRef, className, fallbackClassName }) {
   const reducedMotion = useReducedMotion();
   const [webglOk] = useState(hasWebGL);
+  const ready = useDeferredMount();
+  const disposeRef = useRef(null);
+
+  // Landing's CityScene loads these same two URLs in its own separate
+  // <Canvas>/GL context. useGLTF's cache is global-by-URL, but a
+  // mesh's geometry/material buffers are only valid on the context
+  // that uploaded them — see the matching comment in CityScene.jsx.
+  useEffect(() => {
+    return () => {
+      useGLTF.clear("/models/city.glb");
+      useGLTF.clear("/models/laptop.glb");
+      disposeRef.current?.();
+    };
+  }, []);
 
   if (!webglOk) {
     return <div className={cn(fallbackClassName)} />;
   }
+
+  if (!ready) return <div className={cn(className)} />;
 
   return (
     <div className={cn(className)}>
@@ -163,6 +180,10 @@ export default function LaptopScene({ progressRef, className, fallbackClassName 
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
         camera={{ fov: 40, near: 0.1, far: 20, position: [0, 0.55, 3.25] }}
+        onCreated={(state) => {
+          resyncSizeOnContextRestore(state);
+          disposeRef.current = loseContextOnUnmount(state);
+        }}
       >
         <Suspense fallback={null}>
           <SceneContents reducedMotion={reducedMotion} progressRef={progressRef} />
