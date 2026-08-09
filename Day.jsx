@@ -17,7 +17,7 @@ import { useStudentState } from "../hooks/useStudentState";
 import { useScrollTrack } from "../hooks/useScrollTrack";
 import { useLenis } from "../hooks/useLenis";
 import { localProgress } from "../lib/scrollMath";
-import { dayDetail, student, TOTAL_DAYS } from "../data/challenge";
+import { dayDetail, TOTAL_DAYS } from "../data/challenge";
 
 const TRACK_HEIGHT_VH = 700;
 
@@ -39,9 +39,12 @@ function useLocalSceneProgress(subscribe, start, end) {
 
 export default function Day() {
   const { day: dayParam } = useParams();
-  const day = Number(dayParam) || student.currentDay;
-  const detail = dayDetail[day] ?? dayDetail[student.currentDay];
   const progress = useStudentState();
+  const day = Number(dayParam) || progress.currentDay;
+  // Only day 1 and day 12 have fully authored content — see the matching
+  // comment in Dashboard.jsx for why day 12 is preferred over day 1 as
+  // the fallback for any other day number.
+  const detail = dayDetail[day] ?? dayDetail[progress.currentDay] ?? dayDetail[12] ?? dayDetail[1];
 
   const [completed, setCompleted] = useState(() => progress.isDayComplete(detail.day));
   // Distinguishes "just completed this visit" (show the full proof ->
@@ -50,13 +53,20 @@ export default function Day() {
   const wasAlreadyComplete = useRef(completed).current;
   const prevStats = useRef({ completedDays: progress.completedDays, streak: progress.streak });
 
-  const [checkedItems, setCheckedItems] = useState(() => new Set());
-  const toggleItem = (id) =>
+  // Checklist + proof verification are restored from persisted state on
+  // mount (see useStudentState's checklistByDay/proofByDay) and written
+  // straight back through on every change, so refreshing mid-task doesn't
+  // lose progress.
+  const persistedProof = progress.getProof(detail.day);
+  const [checkedItems, setCheckedItems] = useState(() => new Set(progress.getChecklist(detail.day)));
+  const toggleItem = (id) => {
     setCheckedItems((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+    progress.toggleChecklistItem(detail.day, id);
+  };
 
   const [pulseKey, setPulseKey] = useState(0);
   const bumpPulse = () => setPulseKey((k) => k + 1);
@@ -65,23 +75,33 @@ export default function Day() {
     pattern: /github\.com\/[^\s/]+\/[^\s/]+/i,
     invalidMessage: "Enter a valid GitHub URL.",
     checkLabels: ["Repository found", "Commit found"],
+    initialValue: persistedProof.github?.url,
+    initialVerified: persistedProof.github?.verified,
   });
 
   const linkedin = useProofField({
     pattern: /linkedin\.com\/(posts|feed)\/[^\s]+/i,
     invalidMessage: "Enter a valid LinkedIn URL.",
     checkLabels: ["Post found"],
+    initialValue: persistedProof.linkedin?.url,
+    initialVerified: persistedProof.linkedin?.verified,
   });
 
-  const prevGithubValid = useRef(false);
+  const prevGithubValid = useRef(github.isValid);
   useEffect(() => {
-    if (github.isValid && !prevGithubValid.current) bumpPulse();
+    if (github.isValid && !prevGithubValid.current) {
+      bumpPulse();
+      progress.setProofVerified(detail.day, "github", true, github.value);
+    }
     prevGithubValid.current = github.isValid;
   }, [github.isValid]);
 
-  const prevLinkedinValid = useRef(false);
+  const prevLinkedinValid = useRef(linkedin.isValid);
   useEffect(() => {
-    if (linkedin.isValid && !prevLinkedinValid.current) bumpPulse();
+    if (linkedin.isValid && !prevLinkedinValid.current) {
+      bumpPulse();
+      progress.setProofVerified(detail.day, "linkedin", true, linkedin.value);
+    }
     prevLinkedinValid.current = linkedin.isValid;
   }, [linkedin.isValid]);
 
@@ -146,7 +166,7 @@ export default function Day() {
                 <Gauge className="size-3" strokeWidth={2} />
                 {detail.difficulty}
               </Badge>
-              <Badge tone="accent">{student.track}</Badge>
+              {progress.track && <Badge tone="accent">{progress.track}</Badge>}
             </div>
           </GsapScene>
 
@@ -310,6 +330,8 @@ export default function Day() {
                   previousCompletedCount={wasAlreadyComplete ? undefined : prevStats.current.completedDays}
                   streak={progress.streak}
                   previousStreak={wasAlreadyComplete ? undefined : prevStats.current.streak}
+                  days={progress.days}
+                  currentDay={progress.currentDay}
                 />
               </div>
             ) : (

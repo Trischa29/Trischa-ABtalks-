@@ -1,14 +1,27 @@
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
 import CountUp from "./CountUp";
+import JourneyGrid from "./JourneyGrid";
 
-export default function CompletionState({ day, total, completedCount, previousCompletedCount, streak, previousStreak }) {
+export default function CompletionState({
+  day,
+  total,
+  completedCount,
+  previousCompletedCount,
+  streak,
+  previousStreak,
+  days,
+  currentDay,
+}) {
+  const isFirstDay = day === 1;
+  const remaining = Math.max(0, total - completedCount);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 260, damping: 28 }}
-      className="relative overflow-hidden border border-[var(--color-success-dim)] rounded-[var(--radius-md)] px-6 py-8 text-center"
+      className="relative overflow-hidden border border-[var(--color-success-dim)] rounded-[var(--radius-md)] px-6 py-7 text-center"
     >
       <motion.div
         className="pointer-events-none absolute inset-0"
@@ -21,21 +34,27 @@ export default function CompletionState({ day, total, completedCount, previousCo
         aria-hidden
       />
 
+      {/* Focal point: the day just finished, not a generic "complete" badge */}
       <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 380, damping: 20, delay: 0.15 }}
-        className="relative mx-auto flex size-12 items-center justify-center rounded-full border border-[var(--color-success-dim)]"
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 24, delay: 0.1 }}
+        className="relative"
       >
-        <Check className="size-5 text-[var(--color-success)]" strokeWidth={2.5} />
+        <p className="font-display font-bold leading-[0.95] text-[clamp(2.2rem,8vw,3.2rem)] tracking-tight text-[var(--color-ink)]">
+          Day {String(day).padStart(2, "0")}
+        </p>
+        <div className="mt-2 flex items-center justify-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.14em] text-[var(--color-success)]">
+          <Check className="size-3.5" strokeWidth={3} />
+          Completed
+        </div>
       </motion.div>
 
-      <div className="relative mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--color-ink-mute)]">
-        Day {day} · Complete
-      </div>
-
-      <p className="relative mt-2 font-display text-[22px] text-[var(--color-ink)]">
-        You're still showing up.
+      <p className="relative mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--color-accent)]">
+        {isFirstDay ? "First build complete" : "You're still showing up."}
+      </p>
+      <p className="relative mt-1.5 font-sans text-[14px] text-[var(--color-ink-dim)] max-w-[30ch] mx-auto">
+        {isFirstDay ? "Your 60-day journey has officially begun." : "Every day adds to the record."}
       </p>
 
       <div className="relative mt-6 mx-auto grid max-w-[220px] grid-cols-2 gap-4">
@@ -59,6 +78,17 @@ export default function CompletionState({ day, total, completedCount, previousCo
           </div>
         )}
       </div>
+
+      {days && (
+        <div className="relative mt-7 border-t border-[var(--color-line)] pt-6">
+          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--color-ink-mute)]">
+            {completedCount} / {total} days complete
+            <span className="text-[var(--color-line-strong)]"> · </span>
+            {remaining} to go
+          </p>
+          <JourneyGrid days={days} currentDay={currentDay} className="mt-4 mx-auto max-w-[300px]" />
+        </div>
+      )}
     </motion.div>
   );
 }

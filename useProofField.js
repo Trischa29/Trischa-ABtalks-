@@ -3,10 +3,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // Mocked async verification, triggered explicitly by a "Check ->" button
 // (not on every keystroke) — types, then presses check, then watches it
 // validate. Editing the value after a check invalidates the prior result.
-export function useProofField({ pattern, invalidMessage, checkLabels }) {
-  const [value, setValue] = useState("");
-  const [status, setStatus] = useState("idle"); // idle | validating | valid | invalid
-  const [checks, setChecks] = useState([]);
+//
+// `initialValue`/`initialVerified` let a caller restore a previously
+// persisted verification (see useStudentState's proofByDay) without
+// replaying the check animation — the field just opens already valid.
+export function useProofField({ pattern, invalidMessage, checkLabels, initialValue = "", initialVerified = false }) {
+  const [value, setValue] = useState(initialValue);
+  const [status, setStatus] = useState(initialVerified ? "valid" : "idle"); // idle | validating | valid | invalid
+  const [checks, setChecks] = useState(
+    initialVerified ? checkLabels.map((label) => ({ label, state: "done" })) : []
+  );
+  const skipNextReset = useRef(initialVerified);
   const timers = useRef([]);
 
   const clearTimers = () => {
@@ -15,6 +22,13 @@ export function useProofField({ pattern, invalidMessage, checkLabels }) {
   };
 
   useEffect(() => {
+    // The initial mount also runs this effect (value changed from
+    // "nothing" to its initial value) — skip exactly that one run so a
+    // restored "already verified" field doesn't immediately reset itself.
+    if (skipNextReset.current) {
+      skipNextReset.current = false;
+      return clearTimers;
+    }
     clearTimers();
     setChecks([]);
     setStatus("idle");

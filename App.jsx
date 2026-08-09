@@ -23,10 +23,30 @@ function ScrollToTop() {
   return null;
 }
 
+// Dev-only utility, not part of the real product surface: visiting any
+// route with ?reset=true clears the persisted mock student state and
+// reloads on the clean URL. Not exposed as a button anywhere — this is
+// for demoing the brand-new-student state without a real logout flow.
+function DevReset() {
+  const location = useLocation();
+  useLayoutEffect(() => {
+    if (new URLSearchParams(location.search).get("reset") === "true") {
+      try {
+        window.localStorage.removeItem("abtalks-state-v1");
+      } catch {
+        // storage unavailable — nothing to clear
+      }
+      window.location.href = location.pathname;
+    }
+  }, [location]);
+  return null;
+}
+
 export default function App() {
   return (
     <>
       <ScrollToTop />
+      <DevReset />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/dashboard" element={<Dashboard />} />

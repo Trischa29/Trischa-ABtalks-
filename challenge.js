@@ -3,25 +3,49 @@
 
 export const TOTAL_DAYS = 60;
 
+// Static identity only — track, streak, progress, etc. are real,
+// persisted state (see useStudentState), not hardcoded here.
 export const student = {
   name: "Trischa",
-  track: "Web Development",
-  currentDay: 12,
-  completedDays: 11,
-  streak: 11,
-  longestStreak: 17,
 };
 
-// One entry per day 1..60. status: "complete" | "current" | "upcoming" | "missed"
-export const days = Array.from({ length: TOTAL_DAYS }, (_, i) => {
-  const day = i + 1;
-  let status = "upcoming";
-  if (day < 12) status = day === 6 ? "missed" : "complete";
-  if (day === 12) status = "current";
-  return { day, status };
-});
+export const TRACK_OPTIONS = ["Web Development", "App Development", "AI / ML", "Data", "Other"];
 
 export const dayDetail = {
+  1: {
+    day: 1,
+    title: "Say hello to the world.",
+    task: "Ship a single page that says who you are and what you're learning.",
+    estimate: "45 min",
+    difficulty: "Beginner",
+    skills: ["HTML", "CSS"],
+    description:
+      "Day one isn't about being impressive — it's about showing up. Build a simple one-page site with your name, what you're learning, and why. This becomes the seed your portfolio grows from over the next 60 days.",
+    brief:
+      "Ship a minimal one-page site. Include your name, the track you picked, and one honest sentence on why you're doing this challenge. Keep it small enough to finish today — done beats perfect.",
+    checklist: [
+      {
+        id: "name",
+        label: "Your name",
+        detail: "Say who you are — first line, no clever framing needed.",
+      },
+      {
+        id: "learning",
+        label: "What you're learning",
+        detail: "One or two lines on the track you picked and what you want to get good at.",
+      },
+      {
+        id: "why",
+        label: "Why you're here",
+        detail: "One honest sentence on why you're doing this challenge.",
+      },
+      {
+        id: "ship",
+        label: "Ship it",
+        detail: "Push it live somewhere, even just GitHub Pages. A live link beats a local file.",
+      },
+    ],
+  },
   12: {
     day: 12,
     title: "Build something worth showing.",
@@ -71,19 +95,3 @@ export const achievements = [
   { id: "finisher", label: "60 Day Finisher", atLeast: 60, requirement: "Complete all 60 days." },
 ];
 
-// Recent build history — mocked titles for the days immediately before
-// today, each already verified (both proof channels), reinforcing the
-// "build something every day" loop on the dashboard.
-export const buildHistory = [
-  { day: 12, title: "Portfolio Landing Page", github: true, linkedin: true },
-  { day: 11, title: "Responsive Landing Page", github: true, linkedin: true },
-  { day: 10, title: "JavaScript Interaction", github: true, linkedin: true },
-];
-
-// Alternate dashboard states for demoing the momentum-recovery + first-day UX.
-export const states = {
-  active: { kind: "active" },
-  missed: { kind: "missed", missedDay: 11 },
-  firstDay: { kind: "firstDay" },
-  emptyProfile: { kind: "emptyProfile" },
-};

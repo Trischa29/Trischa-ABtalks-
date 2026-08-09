@@ -1,24 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
-import { student, TOTAL_DAYS } from "../data/challenge";
+import { TOTAL_DAYS } from "../data/challenge";
 
 // Persisted (localStorage) mock student progress — no backend, but the
 // state genuinely survives navigation/refresh, and completing a day
 // really does update the dashboard. Module-level cache + listener list
 // so every component using the hook stays in sync without a Context
 // provider.
+//
+// Default state represents a brand-new student: no track picked, day
+// one, zero streak, nothing completed. The "active, day 12, 12-day
+// streak" dashboard is not a hardcoded starting point — it's what this
+// same state looks like after a student has actually picked a track
+// and completed days for real.
 const STORAGE_KEY = "abtalks-state-v1";
-const MISSED_DAYS = [6];
 
 function defaultState() {
-  const completedDaySet = Array.from({ length: student.completedDays }, (_, i) => i + 1).filter(
-    (d) => !MISSED_DAYS.includes(d)
-  );
   return {
-    currentDay: student.currentDay,
-    streak: student.streak,
-    longestStreak: student.longestStreak,
-    completedDaySet,
-    missedDays: MISSED_DAYS,
+    currentDay: 1,
+    streak: 0,
+    longestStreak: 0,
+    completedDaySet: [],
+    missedDays: [],
+    track: null,
+    checklistByDay: {},
+    proofByDay: {},
   };
 }
 
@@ -28,7 +33,11 @@ function loadInitial() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.completedDaySet)) return parsed;
+      if (parsed && Array.isArray(parsed.completedDaySet)) {
+        // Merge over defaults so state saved before a field existed
+        // (track, checklistByDay, proofByDay) doesn't come back undefined.
+        return { ...defaultState(), ...parsed };
+      }
     }
   } catch {
     // corrupt/blocked storage — fall through to defaults
@@ -68,6 +77,27 @@ export function useStudentState() {
     persist({ ...cache, completedDaySet, streak, longestStreak, currentDay });
   }, []);
 
+  const selectTrack = useCallback((track) => {
+    persist({ ...cache, track });
+  }, []);
+
+  const toggleChecklistItem = useCallback((day, id) => {
+    const current = cache.checklistByDay[day] ?? [];
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    persist({ ...cache, checklistByDay: { ...cache.checklistByDay, [day]: next } });
+  }, []);
+
+  const setProofVerified = useCallback((day, channel, verified, url) => {
+    const dayProof = cache.proofByDay[day] ?? {};
+    persist({
+      ...cache,
+      proofByDay: {
+        ...cache.proofByDay,
+        [day]: { ...dayProof, [channel]: { verified, url } },
+      },
+    });
+  }, []);
+
   const resetProgress = useCallback(() => persist(defaultState()), []);
 
   const completedDays = raw.completedDaySet.length;
@@ -86,9 +116,15 @@ export function useStudentState() {
     streak: raw.streak,
     longestStreak: raw.longestStreak,
     completedDays,
+    track: raw.track,
     isDayComplete: (day) => raw.completedDaySet.includes(day),
+    getChecklist: (day) => raw.checklistByDay[day] ?? [],
+    getProof: (day) => raw.proofByDay[day] ?? {},
     days,
     completeDay,
+    selectTrack,
+    toggleChecklistItem,
+    setProofVerified,
     resetProgress,
   };
 }
